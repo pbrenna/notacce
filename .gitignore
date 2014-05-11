@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 
+*.pdf
+*.ly
+*.mid
 # C extensions
 *.so
 
