@@ -1,5 +1,6 @@
 from Exceptions import *
-from Intervallo import Intervallo
+from Intervallo import *
+import sys
 class Nota:
     scala = {"c": 0,"d":2,"e":4,"f":5,"g":7,"a":9,"b":11}
     note = ["c","d","e","f","g","a","b"]
@@ -19,34 +20,47 @@ class Nota:
             i+=1
         self.grado = i
         self.semitono = self.scala[self.nome] + self.alterazione
+        if intOttava < 0:
+            raise Exception("Ottava deve essere positiva")
+        self.ottava = intOttava 
     
     def __str__(self):
-        return self.nome +self.alterazioni[self.alterazione]
+        return self.nome +self.alterazioni[self.alterazione]+"".join("'" for x in range (self.ottava-2))
     def __repr__(self):
         return self.__str__()
     
     def __add__(self,intervallo):
+        print(str(intervallo),file=sys.stderr)
         if not isinstance(intervallo, Intervallo):
             raise ArgomentiException ("Voglio un intervallo vero")
         nuovoGrado = self.aggiustaGrado(self.grado + intervallo.dg)
-        nuovaNota = Nota(self.note[nuovoGrado],0)
-        #print(nuovaNota)
-        #print(nuovaNota.semitono)
-        intervalloGiustoInSemitoni = self.aggiustaSemitono(nuovaNota.semitono - self.semitono)
-        #print(nuovoGrado)
-        #print(intervalloGiustoInSemitoni)
+        ott = self.ottava
+        if self.grado + intervallo.dg < 0:
+            ott -= 1
+        elif self.grado+intervallo.dg > 6:
+            ott += 1
+        nuovaNota = Nota(self.note[nuovoGrado],0,ott)
+        
+        intervalloGiustoInSemitoni = (self - nuovaNota).ds
+        if self > nuovaNota:
+            intervalloGiustoInSemitoni = -intervalloGiustoInSemitoni        
         nuovaAlterazione = intervallo.ds -intervalloGiustoInSemitoni
         if nuovaAlterazione not in self.alterazioni:
-            raise NotaException("Che razza di intervallo è?")
+            raise NotaException("Che razza di intervallo è (nota: "+str(self)+", ottenuta alterazione "+str(nuovaAlterazione)+")?\n\t"+str(intervallo))
         del(nuovaNota)
-        return Nota(self.note[nuovoGrado],nuovaAlterazione)
+        return Nota(self.note[nuovoGrado],nuovaAlterazione,ott)
     
     def __sub__(self,nota):
         if not isinstance(nota, Nota):
-            raise ArgomentiException ("Voglio una nota vera")
-        distanzaGradi = abs(self.grado - nota.grado)
+            raise ArgomentiException ("Voglio una nota vera, ho ricevuto "+nota.__class__.__name__)
+        sotto = nota
+        sopra = self
+        if sotto > sopra:
+            sopra,sotto = sotto,sopra
         
-        distanzaSemitoni = self.semitono - nota.semitono
+        distanzaGradi = self.aggiustaGrado(sopra.grado - sotto.grado)
+        
+        distanzaSemitoni = self.aggiustaSemitono(sopra.semitono - sotto.semitono)
         return Intervallo(distanzaGradi,distanzaSemitoni)
     
     def aggiustaGrado(self,grado):
@@ -60,7 +74,21 @@ class Nota:
             semitono += self.numSemitoni
         semitono = semitono % self.numSemitoni
         return semitono
+    
+    def __gt__(self,nota):
+        gradoA = self.ottava * 12 + self.semitono
+        gradoB = nota.ottava * 12 + nota.semitono
+        return gradoA > gradoB
+    def __le__(self,nota):
+        return not nota.__gt__(self)
         
-n= Nota("c",0)
-i = Intervallo(6,8)
-n+i
+    def __lt__(self,nota):
+        gradoA = self.ottava * 12 + self.semitono
+        gradoB = nota.ottava * 12 + nota.semitono
+        return gradoA < gradoB
+    def __ge__(self,nota):
+        return not nota.__lt__(self)
+n= Nota("c",0,3)
+n1 = Nota("g",0,4)
+#i = Intervallo(6,8)
+#n+i
